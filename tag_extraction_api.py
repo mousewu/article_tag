@@ -74,8 +74,13 @@ def map_keywords(language, keywords: list):  # 将算法得到的关键词归类
     tags = [word for words in keywords for word in mapping.get(words, [''])]  # 生成标签
     tags_pro = sorted(list(set(tags)), key=tags.index)  # 标签有序去重，保留重要程度排序
 
-    if tags_pro == ['']:
-        return ['区块链']  # 无标签则标记为'区块链'
+    if language == 'english':
+        if tags_pro == ['']:
+            return ['区块链']  # 无标签则标记为'区块链'
+
+    if language == 'chinese':
+        if tags_pro == ['']:
+            return ['Blockchain']  # 无标签则标记为'区块链'
 
     return tags_pro
 
