@@ -43,8 +43,8 @@ def compare(element_1, element_2) -> int:  # 比较函数，用于排序关键�
 
 def map_keywords(language, keywords: list):  # 将算法得到的关键词归类为具体标签
 
-    if language == 'english':  # 英文标签匹配尚未完成，直接跳出
-        return keywords
+    #if language == 'english':  # 英文标签匹配尚未完成，直接跳出
+    #    return keywords
 
     mapping_list = pd.read_excel(
         io=''.join([os.getcwd(), '/alternative_tags/', language, '_alternative_tags.xlsx']),
