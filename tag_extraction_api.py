@@ -76,11 +76,11 @@ def map_keywords(language, keywords: list):  # 将算法得到的关键词归类
 
     if language == 'english':
         if tags_pro == ['']:
-            return ['区块链']  # 无标签则标记为'区块链'
+            return ['Blockchain']  # 无标签则标记为'区块链'
 
     if language == 'chinese':
         if tags_pro == ['']:
-            return ['Blockchain']  # 无标签则标记为'区块链'
+            return ['区块链']  # 无标签则标记为'区块链'
 
     return tags_pro
 
