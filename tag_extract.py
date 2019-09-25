@@ -13,7 +13,7 @@ import pandas as pd  # 数据处理包pandas
 
 import jieba  # 中文分词
 import nltk, spacy  # 英文分词    # import pke 英文关键词提取
-# import MeCab    # 日文分词
+import MeCab    # 日文分词
 
 from Models.Longhash.ContentNewsModel import ContentNewsModel
 from Util.Env import env
@@ -102,7 +102,8 @@ class TagExtraction(object):
         self.userdict = self.get_userdict()  # 自定义词典
         #
         self.corpus = self.get_corpus(load_from_saved)  # 语料库
-        # self.text = self.get_text(latest)  # 文章
+        self.text = self.get_text(latest)  # 文章
+        self.tags = dict()
 
     def get_stopwords(self):  # 读取停用词词典，路径为 ./stopwords/***_stopwords.txt（中文、英文、日文）
         with open(file=env.stopwords_path + '{}_stopwords.txt'.format(self.language), mode='r', encoding='utf-8') as words:
@@ -112,7 +113,7 @@ class TagExtraction(object):
         '''
         # 读取自定义词典，路径为 ./userdict/***_userdict.txt（中文、英文），日文的储存方式为csv
         '''
-        if self.language == 'chinese':                                                                  # 返回值为None，直接调用接口加载自定义词典
+        if self.language == 'chinese': # 返回值为None，直接调用接口加载自定义词典
             return jieba.load_userdict(env.userdict_path + '{}_userdict.txt'.format(self.language))     # 使用jieba的load_userdict方法
         elif self.language == 'english':                                                                # 返回值为存有自定义词典的list
             with open(env.userdict_path + '{}_userdict.txt'.format(self.language), mode='r', encoding='utf-8') as words:
@@ -241,11 +242,11 @@ class TagExtraction(object):
 
             return words
 
-    def get_data(self, language):
+    def get_data(self):
         '''
-        # 从数据库读取所有Longhash新闻，格式为Dataframe，包括4个Column 【'title', 'shorttitle', 'summary', 'content'】
+        # 从数据库读取所有Longhash新闻，格式为Dataframe，包括4个Column ['title', 'shorttitle', 'summary', 'content']
         '''
-        return ContentNewsModel().where('type', language).select('title', 'shorttitle', 'summary', 'content').take(1).data()
+        return ContentNewsModel().where('type', self.language).select('title', 'shorttitle', 'summary', 'content').data()
 
     def get_corpus(self, load_from_saved):  # 读取语料库
         LOG('Loading corpus', head='\n')
@@ -259,7 +260,7 @@ class TagExtraction(object):
                 return [doc.strip().split() for doc in load.readlines()]  # 从文件中读取已保存的划分好的词组
 
         else:
-            corpus_excel = self.get_data(1)
+            corpus_excel = self.get_data()
 
             if self.language == 'japanese':  # 日文中含有未处理的html标签，需要清洗掉
                 corpus_excel['content'] = corpus_excel['content'].map(lambda x: re.sub('<.+?>', '', x))
@@ -291,9 +292,10 @@ class TagExtraction(object):
 
     def get_text(self, latest):                 # 读取文章（待提取标签的文本）
         LOG('Loading text')
+        print("Corpus size: ",len(self.corpus))
         all_text = dict(enumerate(self.corpus))
         if latest:
-            return {max(all_text.keys()), self.corpus[max(all_text.keys())]}
+            return {max(all_text.keys()):self.corpus[max(all_text.keys())]}
         else:                                   # 不进行调试，中文、日文和英文nltk可以直接使用语料库的处理结果
             return all_text  # 字典键值为序号
 
@@ -323,7 +325,8 @@ class TagExtraction(object):
         idf, default_idf = train_idf(self.corpus)  # 得到idf值
         for title, content in sorted(self.text.items(), key=lambda x: x[0]):  # 排序文章路径
             tfidf_model = TfIdf(idf, default_idf, content, keyword_num)  # TFIDF类的实例化，得到tfidf模型
-            tfidf_model.get_tfidf(title, self.language, self.save)  # 使用TFIDF类的方法，得到tfidf关键词
+            tags = tfidf_model.get_tfidf(title, self.language)  # 使用TFIDF类的方法，得到tfidf关键词
+            self.tags[title] = tags
 
 
 class TfIdf(object):  # 参考书上的算法模型
@@ -347,7 +350,7 @@ class TfIdf(object):  # 参考书上的算法模型
 
         return tf
 
-    def get_tfidf(self, title, language, save):  # 按公式计算tf-idf
+    def get_tfidf(self, title, language):  # 按公式计算tf-idf
 
         tfidf: dict = {}
         for word in self.text:
@@ -362,6 +365,8 @@ class TfIdf(object):  # 参考书上的算法模型
                     sorted(tfidf.items(), key=functools.cmp_to_key(compare), reverse=True)[:self.keyword_num]]
         tags = map_keywords(language, keywords)  # 将关键词归类得到tags
         print(' / '.join(' '.join(tags).split()))  # 输出归类标签
+        return tags
+
 
         ################## test
         # with open(file=''.join([os.getcwd(), '/result/', language, '_TFIDF_tags_modified.txt']), mode='a', encoding='utf-8') as tags_file:
@@ -373,11 +378,11 @@ class TfIdf(object):  # 参考书上的算法模型
         #             tags_file.write('\n')
         ##################
 
-        if save:  # 保存关键词
-            with open(file=''.join([os.getcwd(), '/result/', language, '_tags_TFIDF.txt']), mode='a',
-                      encoding='utf-8') as tags_file:
-                tags_file.write(' '.join(keywords))  # 考虑是保存keywords（存在新的词语）还是tags（只会出现表中的词语）
-                tags_file.write('\n')
+        #if save:  # 保存关键词
+        #    with open(file=''.join([os.getcwd(), '/result/', language, '_tags_TFIDF.txt']), mode='a',
+        #              encoding='utf-8') as tags_file:
+        #        tags_file.write(' '.join(keywords))  # 考虑是保存keywords（存在新的词语）还是tags（只会出现表中的词语）
+        #        tags_file.write('\n')
 
 
 def run():  # 中文、英文、日文，先实例化再调用不同算法提取关键词
@@ -410,11 +415,11 @@ if __name__ == "__main__":
     # print(TagExtraction('english', True).get_stopwords())
     # print(TagExtraction('english', False).get_userdict())
     # exit(0)
-    print(TagExtraction('english', False).get_corpus(False))
-    print(process('chinese', False))
+    #print(TagExtraction('english', False).get_corpus(False))
+    process('chinese', True)
     # print(get_data(language=1))
     exit(0)
-    start = time.time()
-    run()  # 主程序入口
-    end = time.time()
-    print('\nDuration: %.3fs' % (end - start))  # 程序运行时间
+    #start = time.time()
+    #run()  # 主程序入口
+    #end = time.time()
+    #print('\nDuration: %.3fs' % (end - start))  # 程序运行时间
