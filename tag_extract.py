@@ -1,19 +1,21 @@
-import datetime    # 用于显示时间
-import math    # 用于数学计算，如计算相似度
-import os    # 用于系统操作，如获取目录
-import re    # 用于处理字符串
-import sys    # 用于系统操作
-import time    # 用于计时
+import datetime  # 用于显示时间
+import math  # 用于数学计算，如计算相似度
+import os  # 用于系统操作，如获取目录
+import re  # 用于处理字符串
+import sys  # 用于系统操作
+import time  # 用于计时
 
-import functools    # 用于比较关键词重要程度
-from gensim import corpora, models    # 调用gensim主题模型接口
-import html    # 用于处理html转义字符
-import numpy as np    # 数据处理包numpy
-import pandas as pd    # 数据处理包pandas
+import functools  # 用于比较关键词重要程度
+from gensim import corpora, models  # 调用gensim主题模型接口
+import html  # 用于处理html转义字符
+import numpy as np  # 数据处理包numpy
+import pandas as pd  # 数据处理包pandas
 
-import jieba    # 中文分词
-import nltk, spacy    # 英文分词    # import pke 英文关键词提取
-import MeCab    # 日文分词
+import jieba  # 中文分词
+import nltk, spacy  # 英文分词    # import pke 英文关键词提取
+# import MeCab    # 日文分词
+
+from Models.Longhash.ContentNewsModel import ContentNewsModel
 
 
 def LOG(comment, head='', tail=''):  # 用于显示程序运行的时刻
@@ -40,10 +42,15 @@ def compare(element_1, element_2) -> int:  # 比较函数，用于排序关键�
         else:
             return -1
 
+def get_data(language):
+    '''
+    # 从数据库读取所有Longhash新闻，格式为Dataframe，包括4个Column 【'title', 'shorttitle', 'summary', 'content'】
+    '''
+    return ContentNewsModel().where('type', language).select('title', 'shorttitle', 'summary', 'content').first()
 
 def map_keywords(language, keywords: list):  # 将算法得到的关键词归类为具体标签
 
-    #if language == 'english':  # 英文标签匹配尚未完成，直接跳出
+    # if language == 'english':  # 英文标签匹配尚未完成，直接跳出
     #    return keywords
 
     mapping_list = pd.read_excel(
@@ -267,17 +274,7 @@ class TagExtraction(object):
                 return [doc.strip().split() for doc in load.readlines()]  # 从文件中读取已保存的划分好的词组
 
         else:
-
-            """
-            corpus_excel = pd.read_excel(
-                io=''.join([os.getcwd(), '/corpus/longhash_news.xlsx']),
-                sheet_name=self.language,
-                usecols=['title', 'shorttitle', 'summary', 'content']
-            )  # 读取longhash_news文件
-            """
-            # 从数据库读取所有Longhash新闻，格式为Dataframe，包括4个Column 【'title', 'shorttitle', 'summary', 'content'】
-            corpus_excel = pd.DataFrame()
-
+            corpus_excel = self.get_data()
             if self.language == 'japanese':  # 日文中含有未处理的html标签，需要清洗掉
                 corpus_excel['content'] = corpus_excel['content'].map(lambda x: re.sub('<.+?>', '', x))
 
@@ -321,11 +318,10 @@ class TagExtraction(object):
 
         all_text = dict(enumerate(self.corpus))
         if latest:
-            return {max(all_text.keys()),self.corpus[max(all_text.keys())]}
+            return {max(all_text.keys()), self.corpus[max(all_text.keys())]}
         else:  # 不进行调试，中文、日文和英文nltk可以直接使用语料库的处理结果
 
             return all_text  # 字典键值为序号
-
 
     def tfidf_extract(self, keyword_num=10):  # 使用tfidf算法，默认为10个关键词
 
@@ -410,10 +406,9 @@ class TfIdf(object):  # 参考书上的算法模型
                 tags_file.write('\n')
 
 
-
 def run():  # 中文、英文、日文，先实例化再调用不同算法提取关键词
 
-    print('Chinese tag extraction:')    # 中文
+    print('Chinese tag extraction:')  # 中文
     chinese_model = TagExtraction('chinese', load_from_saved=False, latest=True, save=False)
     chinese_model.tfidf_extract(keyword_num=20)
 
@@ -423,7 +418,6 @@ def run():  # 中文、英文、日文，先实例化再调用不同算法提取
     english_model = TagExtraction('english', load_from_saved=False, latest=True, save=False)
     english_model.tfidf_extract(keyword_num=20)  # 使用spacy，与pke的区别：存在sentence和word的filter，不需要额外读取，需要取消相关注释
 
-
     # print('\n')
 
     # print('Japanese tag extraction:')    # 日文，暂未完善
@@ -431,12 +425,17 @@ def run():  # 中文、英文、日文，先实例化再调用不同算法提取
     # japanese_model.tfidf_extract(keyword_num=20)
     # japanese_model.topic_extract(model='LDA', keyword_num=20)
 
-def process(language,latest):
+
+def process(language, latest):
     print(language + ' tag extraction:\n')
-    model = TagExtraction(language,latest)
+    model = TagExtraction(language, latest)
     model.tfidf_extract(keyword_num=20)
 
+
 if __name__ == "__main__":
+    print(process('chinese', True))
+    print(get_data(language=1))
+    exit(0)
     start = time.time()
     run()  # 主程序入口
     end = time.time()
