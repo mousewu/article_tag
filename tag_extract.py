@@ -13,9 +13,10 @@ import pandas as pd  # 数据处理包pandas
 
 import jieba  # 中文分词
 import nltk, spacy  # 英文分词    # import pke 英文关键词提取
-# import MeCab    # 日文分词
+import MeCab    # 日文分词
 
 from Models.Longhash.ContentNewsModel import ContentNewsModel
+from Util.Env import env
 
 
 def LOG(comment, head='', tail=''):  # 用于显示程序运行的时刻
@@ -41,12 +42,6 @@ def compare(element_1, element_2) -> int:  # 比较函数，用于排序关键�
             return 0
         else:
             return -1
-
-def get_data(language):
-    '''
-    # 从数据库读取所有Longhash新闻，格式为Dataframe，包括4个Column 【'title', 'shorttitle', 'summary', 'content'】
-    '''
-    return ContentNewsModel().where('type', language).select('title', 'shorttitle', 'summary', 'content').first()
 
 def map_keywords(language, keywords: list):  # 将算法得到的关键词归类为具体标签
 
@@ -110,26 +105,19 @@ class TagExtraction(object):
         self.text = self.get_text(latest)  # 文章
 
     def get_stopwords(self):  # 读取停用词词典，路径为 ./stopwords/***_stopwords.txt（中文、英文、日文）
+        with open(file=env.stopwords_path + '{}_stopwords.txt'.format(self.language), mode='r', encoding='utf-8') as words:
+            return [stop_word.strip() for stop_word in words.readlines()]  # 返回停用词列表
 
-        with open(file=''.join([os.getcwd(), '/stopwords/', self.language, '_stopwords.txt']), mode='r',
-                  encoding='utf-8') as stop_words:
-            return [stop_word.strip() for stop_word in stop_words.readlines()]  # 返回停用词列表
-
-    def get_userdict(self):  # 读取自定义词典，路径为 ./userdict/***_userdict.txt（中文、英文），日文的储存方式为csv
-
-        if self.language == 'chinese':  # 返回值为None，直接调用接口加载自定义词典
-
-            jieba.load_userdict(
-                ''.join([os.getcwd(), '/userdict/', self.language, '_userdict.txt']))  # 使用jieba的load_userdict方法
-
-        elif self.language == 'english':  # 返回值为存有自定义词典的list
-
-            with open(file=''.join([os.getcwd(), '/userdict/', self.language, '_userdict.txt']), mode='r',
-                      encoding='utf-8') as words:
-                return [tuple(line.lower().strip().split()) for line in words.readlines()]  # 配合使用nltk的MWE分词器
-
+    def get_userdict(self):
+        '''
+        # 读取自定义词典，路径为 ./userdict/***_userdict.txt（中文、英文），日文的储存方式为csv
+        '''
+        if self.language == 'chinese':                                                                  # 返回值为None，直接调用接口加载自定义词典
+            return jieba.load_userdict(env.userdict_path + '{}_userdict.txt'.format(self.language))     # 使用jieba的load_userdict方法
+        elif self.language == 'english':                                                                # 返回值为存有自定义词典的list
+            with open(env.userdict_path + '{}_userdict.txt'.format(self.language), mode='r', encoding='utf-8') as words:
+                return [tuple(line.lower().strip().split()) for line in words.readlines()]              # 配合使用nltk的MWE分词器
         elif self.language == 'japanese':  # 返回值为None，生成csv与dic文件
-
             pass
 
             # userdic = /data/workdir/dev/nlp/tag_extraction/tag_extraction_api/userdict/userdictjp.dic
@@ -144,19 +132,12 @@ class TagExtraction(object):
             #     upload.write('userdic = /data/workdir/dev/nlp/tag_extraction/tag_extraction_api/userdict/userdictjp.dic\n')
 
     def sentence_filter(self, sentence):  # 对句子进行初步的分词和清洗
-
         if self.language == 'chinese':
-
             import jieba.posseg as psg
-
             return psg.cut(sentence)  # 使用jieba的分词接口直接完成分词和清洗
-
         elif self.language == 'english':
-
             from nltk.tokenize import MWETokenizer  # 使用MWE分词器
-
             tokenizer = MWETokenizer(self.userdict)  # 添加自定义词组，以下划线'_'为词组连接
-
             nlp = spacy.load('en_core_web_sm')  # 生成spacy分词器
 
             # for word in self.userdict:    # spacy添加自定义词语，貌似无效
@@ -260,10 +241,14 @@ class TagExtraction(object):
 
             return words
 
+    def get_data(self, language):
+        '''
+        # 从数据库读取所有Longhash新闻，格式为Dataframe，包括4个Column 【'title', 'shorttitle', 'summary', 'content'】
+        '''
+        return ContentNewsModel().where('type', language).select('title', 'shorttitle', 'summary', 'content').take(1).data()
+
     def get_corpus(self, load_from_saved):  # 读取语料库
-
         LOG('Loading corpus', head='\n')
-
         if load_from_saved:  # 读取上一次程序保存的已处理好的语料库
 
             # if self.language == 'english':
@@ -274,7 +259,8 @@ class TagExtraction(object):
                 return [doc.strip().split() for doc in load.readlines()]  # 从文件中读取已保存的划分好的词组
 
         else:
-            corpus_excel = self.get_data()
+            corpus_excel = self.get_data(1)
+
             if self.language == 'japanese':  # 日文中含有未处理的html标签，需要清洗掉
                 corpus_excel['content'] = corpus_excel['content'].map(lambda x: re.sub('<.+?>', '', x))
 
@@ -285,42 +271,30 @@ class TagExtraction(object):
             corpus_line = corpus_excel.apply(func, axis='columns')  # 将四列合并为一列，便于处理
 
             corpus: list = []
-            for num, line in enumerate(corpus_line):  # 遍历语料库中每一篇文章
+            for num, line in enumerate(corpus_line):                # 遍历语料库中每一篇文章
                 print(num + 1, end=' ')
-                content = line.strip()  # 去掉前后的空格
-                sentence = self.sentence_filter(content)  # 清洗句子
+                content = line.strip()                              # 去掉前后的空格
+                sentence = self.sentence_filter(content)            # 清洗句子
                 # if self.language == 'english':
-                #     corpus.append(sentence)    # 使用pke，直接将句子储存起来，不需要筛选词性
+                #     corpus.append(sentence)                       # 使用pke，直接将句子储存起来，不需要筛选词性
                 #     continue
-                words = self.word_filter(sentence)  # 对词组进行词性筛选
-                corpus.append(words)  # 将词组存入corpus中
-            print('\n')
+                words = self.word_filter(sentence)                  # 对词组进行词性筛选
+                corpus.append(words)                                # 将词组存入corpus中
 
-            # if self.language == 'english':
-            #     pd.DataFrame(corpus).to_csv(path_or_buf=''.join([os.getcwd(), '/corpus/english_text.csv']), index=False, header=False)
-            #     return ''.join([os.getcwd(), '/corpus/english_text.csv'])    # 使用pke，将储存的句子输出至csv文件中
-
-            corpus_wash = [line for line in corpus if line != []]  # 将空行删掉
-
-            with open(file=''.join([os.getcwd(), '/corpus/', self.language, '_corpus_vocabulary.txt']), mode='w',
-                      encoding='utf-8') as save:
-
+            corpus_wash = [line for line in corpus if line != []]   # 将空行删掉
+            with open(file=env.corpus_path + '{}_corpus_vocabulary.txt'.format(self.language), mode='w', encoding='utf-8') as save:
                 # 把语料库保存至corpus文件夹的txt文件中（中文、日文、英文nltk）
                 for doc in corpus_wash:
                     save.write(' '.join(doc))
                     save.write('\n')
-
             return corpus_wash
 
-    def get_text(self, latest):  # 读取文章（待提取标签的文本）
-
+    def get_text(self, latest):                 # 读取文章（待提取标签的文本）
         LOG('Loading text')
-
         all_text = dict(enumerate(self.corpus))
         if latest:
             return {max(all_text.keys()), self.corpus[max(all_text.keys())]}
-        else:  # 不进行调试，中文、日文和英文nltk可以直接使用语料库的处理结果
-
+        else:                                   # 不进行调试，中文、日文和英文nltk可以直接使用语料库的处理结果
             return all_text  # 字典键值为序号
 
     def tfidf_extract(self, keyword_num=10):  # 使用tfidf算法，默认为10个关键词
@@ -433,8 +407,11 @@ def process(language, latest):
 
 
 if __name__ == "__main__":
-    print(process('chinese', True))
-    print(get_data(language=1))
+    # print(TagExtraction('english', True).get_stopwords())
+    # print(TagExtraction('chinese', False).get_userdict())
+    # print(TagExtraction('chinese', False).get_corpus(False))
+    print(process('chinese', False))
+    # print(get_data(language=1))
     exit(0)
     start = time.time()
     run()  # 主程序入口

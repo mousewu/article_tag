@@ -94,6 +94,21 @@ class Env(object):
         """项目util库目录"""
         return self.__basepath__ + 'Resource/'
 
+    @property
+    def stopwords_path(self):
+        """项目util库目录"""
+        return self.__basepath__ + 'stopwords/'
+
+    @property
+    def userdict_path(self):
+        """项目util库目录"""
+        return self.__basepath__ + 'userdict/'
+
+    @property
+    def corpus_path(self):
+        """项目util库目录"""
+        return self.__basepath__ + 'corpus/'
+
 
 env = Env()
 
