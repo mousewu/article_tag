@@ -13,7 +13,7 @@ import pandas as pd  # 数据处理包pandas
 
 import jieba  # 中文分词
 import nltk, spacy  # 英文分词    # import pke 英文关键词提取
-import MeCab    # 日文分词
+# import MeCab    # 日文分词
 
 from Models.Longhash.ContentNewsModel import ContentNewsModel
 from Util.Env import env
@@ -100,9 +100,9 @@ class TagExtraction(object):
 
         self.stopwords = self.get_stopwords()  # 停用词词典
         self.userdict = self.get_userdict()  # 自定义词典
-
+        #
         self.corpus = self.get_corpus(load_from_saved)  # 语料库
-        self.text = self.get_text(latest)  # 文章
+        # self.text = self.get_text(latest)  # 文章
 
     def get_stopwords(self):  # 读取停用词词典，路径为 ./stopwords/***_stopwords.txt（中文、英文、日文）
         with open(file=env.stopwords_path + '{}_stopwords.txt'.format(self.language), mode='r', encoding='utf-8') as words:
@@ -408,8 +408,9 @@ def process(language, latest):
 
 if __name__ == "__main__":
     # print(TagExtraction('english', True).get_stopwords())
-    # print(TagExtraction('chinese', False).get_userdict())
-    # print(TagExtraction('chinese', False).get_corpus(False))
+    # print(TagExtraction('english', False).get_userdict())
+    # exit(0)
+    print(TagExtraction('english', False).get_corpus(False))
     print(process('chinese', False))
     # print(get_data(language=1))
     exit(0)
