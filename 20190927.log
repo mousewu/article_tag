@@ -1,0 +1,8 @@
+2019-09-27 18:15:15,563 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`='japanese'
+2019-09-27 18:15:40,541 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`='japanese'
+2019-09-27 18:16:10,303 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`='japanese'
+2019-09-27 18:17:03,974 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`='japanese'
+2019-09-27 18:18:40,491 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`='japanese' limit 5
+2019-09-27 18:19:07,234 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`='japanese' limit 5
+2019-09-27 18:20:18,925 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`='japanese' limit 5
+2019-09-27 18:21:36,518 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`='japanese' limit 5

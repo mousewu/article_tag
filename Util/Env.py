@@ -109,6 +109,11 @@ class Env(object):
         """项目util库目录"""
         return self.__basepath__ + 'corpus/'
 
+    @property
+    def alternative_tags_path(self):
+        """项目util库目录"""
+        return self.__basepath__ + 'alternative_tags/'
+
 
 env = Env()
 
