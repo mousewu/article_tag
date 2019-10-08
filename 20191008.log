@@ -1,0 +1,10 @@
+2019-10-08 15:08:22,903 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `id`=518 limit 1
+2019-10-08 15:09:17,372 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `id`=518 limit 1
+2019-10-08 15:09:23,920 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `id`=518 limit 1
+2019-10-08 15:17:37,748 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`=0 limit 5
+2019-10-08 15:18:56,810 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`=0 limit 5
+2019-10-08 15:20:12,087 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`=0 limit 5
+2019-10-08 15:23:02,778 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`=0 limit 5
+2019-10-08 15:25:32,544 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `type`=0 limit 5
+2019-10-08 15:26:36,046 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `id`=1 limit 1
+2019-10-08 15:29:13,392 【INFO】【sql】:select `title`,`shorttitle`,`summary`,`content` from lh_content_news where `id`=1 limit 1

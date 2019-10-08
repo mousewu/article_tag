@@ -16,7 +16,7 @@ class TagExtraction(object):
     __corpus = None
     __text = None
     __id = 518
-    LH_NEWS_TAG = 'lh:news:tag'
+    LH_NEWS_TAG_CN = 'lh:news:tag:cn'
 
     def handle(self):
         return self.tfidf_extract(20)
@@ -30,13 +30,13 @@ class TagExtraction(object):
     @property
     def corpus(self):   # 读取语料库
         if self.__corpus is None:
-            temp = Redis.get(self.LH_NEWS_TAG)
+            temp = Redis.get(self.LH_NEWS_TAG_CN)
             if temp:
                 self.__corpus = json.loads(temp)
             else:
                 self.__corpus = self.format_content(self.get_data())
-                Redis.set(self.LH_NEWS_TAG, json.dumps(self.__corpus))
-                Redis.expire(self.LH_NEWS_TAG, 86400 * 7)
+                Redis.set(self.LH_NEWS_TAG_CN, json.dumps(self.__corpus))
+                Redis.expire(self.LH_NEWS_TAG_CN, 86400 * 7)
         return self.__corpus
 
     @property

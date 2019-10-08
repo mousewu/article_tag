@@ -22,8 +22,9 @@ from nltk.tokenize import MWETokenizer  # 使用MWE分词器
 from Models.Longhash.ContentNewsModel import ContentNewsModel
 from Util.ConfigParser import config
 from Util.Env import env
+from Util.Redis import Redis
 import collections
-
+import json
 
 class TagExtraction(object):
     __language = 'english'
@@ -32,20 +33,28 @@ class TagExtraction(object):
     __text = None
     __id = 1
 
+    LH_NEWS_TAG_EN = 'lh:news:tag:en'
+
     def handle(self):
-        pass
+        return self.tfidf_extract(20)
 
     @property
     def userdict(self):
         if self.__userdict is None:
-            with open(env.userdict_path + '{}_userdict.txt'.format(self.__language), mode='r', encoding='utf-8') as words:
+            with open(self.userdict_path(), mode='r', encoding='utf-8') as words:
                 self.__userdict = [tuple(line.lower().strip().split()) for line in words.readlines()]
         return self.__userdict
 
     @property
     def corpus(self):   # 读取语料库
         if self.__corpus is None:
-            self.__corpus = self.format_content(self.get_data())
+            temp = Redis.get(self.LH_NEWS_TAG_EN)
+            if temp:
+                self.__corpus = json.loads(temp)
+            else:
+                self.__corpus = self.format_content(self.get_data())
+                Redis.set(self.LH_NEWS_TAG_EN, json.dumps(self.__corpus))
+                Redis.expire(self.LH_NEWS_TAG_EN, 86400 * 7)
         return self.__corpus
 
     @property
@@ -95,14 +104,13 @@ class TagExtraction(object):
         return words
 
     def notadd(self, content):  # 去掉含网址的词语
-
-        if '.' in content:  # example: '.com' in content or '.org' in content or '.io' in content:
+        if '.' in content:
             return False
         else:
             return True
 
     def get_data(self):
-        return ContentNewsModel().where('type', 0).select('title', 'shorttitle', 'summary', 'content').take(5).data()
+        return ContentNewsModel().where('type', 0).select('title', 'shorttitle', 'summary', 'content').data()
 
     def tfidf_extract(self, keyword_num=10):  # 使用tfidf算法，默认为10个关键词
         self.idf, self.default_idf = self.train_idf(self.corpus)  # 得到idf值
@@ -157,5 +165,5 @@ class TagExtraction(object):
 
 
 if __name__ == "__main__":
-    print(TagExtraction().tfidf_extract(keyword_num=20))
+    print(TagExtraction().handle())
     exit(0)
